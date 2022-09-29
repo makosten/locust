@@ -69,14 +69,14 @@ class FastHttpSession:
     auth_header = None
 
     def __init__(
-        self,
-        environment: Environment,
-        base_url: str,
-        user: Optional[User],
-        insecure=True,
-        client_pool: Optional[HTTPClientPool] = None,
-        ssl_context_factory: Optional[Callable] = None,
-        **kwargs,
+            self,
+            environment: Environment,
+            base_url: str,
+            user: Optional[User],
+            insecure=True,
+            client_pool: Optional[HTTPClientPool] = None,
+            ssl_context_factory: Optional[Callable] = None,
+            **kwargs,
     ):
         self.environment = environment
         self.base_url = base_url
@@ -140,19 +140,20 @@ class FastHttpSession:
             return r
 
     def request(
-        self,
-        method: str,
-        url: str,
-        name: str | None = None,
-        data: str | dict | None = None,
-        catch_response: bool = False,
-        stream: bool = False,
-        headers: dict | None = None,
-        auth=None,
-        json: dict | None = None,
-        allow_redirects=True,
-        context: dict = {},
-        **kwargs,
+            self,
+            method: str,
+            url: str,
+            name: str | None = None,
+            data: str | dict | None = None,
+            catch_response: bool = False,
+            stream: bool = False,
+            headers: dict | None = None,
+            auth=None,
+            json: dict | None = None,
+            allow_redirects=True,
+            context: dict = {},
+            use_solr_num_found: bool = False,
+            **kwargs,
     ) -> ResponseContextManager | FastResponse:
         """
         Send and HTTP request
@@ -218,7 +219,8 @@ class FastHttpSession:
             "response": response,
             "exception": None,
             "start_time": start_time,
-            "url": built_url,  # this is a small deviation from HttpSession, which gets the final (possibly redirected) URL
+            "url": built_url,
+            # this is a small deviation from HttpSession, which gets the final (possibly redirected) URL
         }
 
         if not allow_redirects:
@@ -230,7 +232,18 @@ class FastHttpSession:
             request_meta["response_length"] = int(response.headers.get("response_length") or 0)
         else:
             try:
-                request_meta["response_length"] = len(response.content or "")
+                if use_solr_num_found:
+                    try:
+                        num_found = 0
+                        solr_json = response.json()
+                        if "response" in solr_json and "numFound" in solr_json["response"]:
+                            num_found = int(solr_json["response"]["numFound"])
+                    except ValueError:
+                        num_found = 0
+                    request_meta["response_length"] = num_found
+                else:
+                    request_meta["response_length"] = len(response.content or "")
+
             except HTTPParseError as e:
                 request_meta["response_time"] = (time.perf_counter() - start_perf_counter) * 1000
                 request_meta["response_length"] = 0
@@ -375,10 +388,10 @@ class FastResponse(CompatResponse):
     request: Optional[FastRequest] = None
 
     def __init__(
-        self,
-        ghc_response: HTTPSocketPoolResponse,
-        request: Optional[FastRequest] = None,
-        sent_request: Optional[str] = None,
+            self,
+            ghc_response: HTTPSocketPoolResponse,
+            request: Optional[FastRequest] = None,
+            sent_request: Optional[str] = None,
     ):
         super().__init__(ghc_response, request, sent_request)
 

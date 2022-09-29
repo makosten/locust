@@ -26,6 +26,39 @@ def ultra_fast():
     return "This is an ultra fast response"
 
 
+@app.route("/solr_json")
+def solr_json():
+    return '{' \
+           '"responseHeader":{ "zkConnected":true, "status":0, "QTime":161},' \
+           '"response":{"numFound":60, "start":60, "docs":[]}' \
+           '}'
+
+
+@app.route("/solr_json_400")
+def solr_json_400():
+    return '{' \
+           '"responseHeader":{"status":400, "QTime":0},' \
+           '"error":{' \
+           '"metadata":["error-class", "org.apache.solr.common.SolrException",' \
+           '"root-error-class","org.apache.solr.parser.ParseException"],' \
+           '"msg":"org.apache.solr.search.SyntaxError: Cannot parse",' \
+           '"code":400}' \
+           '}'
+
+
+@app.route("/solr_json_ping")
+def solr_json_ping():
+    return '{' \
+           '"responseHeader":{ "zkConnected":true, "status":0, "QTime":0},' \
+           '"status":"OK"' \
+           '}'
+
+
+@app.route("/solr_json_not_json")
+def solr_json_not_json():
+    return '<requestHeader/>'
+
+
 @app.route("/fast")
 def fast():
     gevent.sleep(random.choice([0.1, 0.2, 0.3]))

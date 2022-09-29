@@ -24,6 +24,12 @@ class TestFastHttpSession(WebserverTestCase):
         r = s.get("/ultra_fast")
         self.assertEqual(200, r.status_code)
 
+    def test_get_solr_json(self):
+        s = self.get_client()
+        r = s.get("/solr_json")
+        self.assertEqual(200, r.status_code)
+        self.assertEqual(60, r.json()["response"]["numFound"])
+
     def test_connection_error(self):
         s = FastHttpSession(self.environment, "http://localhost:1", user=None)
         r = s.get("/", headers={"X-Test-Headers": "hello"})
@@ -271,6 +277,51 @@ class TestRequestStatsWithWebserver(WebserverTestCase):
         self.assertEqual(
             self.runner.stats.get("/ultra_fast", "GET").avg_content_length, len("This is an ultra fast response")
         )
+
+    def test_request_stats_solr_num_found(self):
+        class MyUser(FastHttpUser):
+            host = "http://127.0.0.1:%i" % self.port
+
+        locust = MyUser(self.environment)
+        locust.client.get("/solr_json", use_solr_num_found=True)
+        self.assertEqual(
+            self.runner.stats.get("/solr_json", "GET").avg_content_length, 60
+        )
+        locust.client.get("/solr_json",  use_solr_num_found=True)
+        self.assertEqual(
+            self.runner.stats.get("/solr_json", "GET").avg_content_length, 60
+        )
+
+    def test_request_stats_solr_num_found_for_error(self):
+        class MyUser(FastHttpUser):
+            host = "http://127.0.0.1:%i" % self.port
+
+        locust = MyUser(self.environment)
+        locust.client.get("/solr_json_400", use_solr_num_found=True)
+        self.assertEqual(
+            self.runner.stats.get("/solr_json_400", "GET").avg_content_length, 0
+        )
+
+    def test_request_stats_solr_num_found_for_ping(self):
+        class MyUser(FastHttpUser):
+            host = "http://127.0.0.1:%i" % self.port
+
+        locust = MyUser(self.environment)
+        locust.client.get("/solr_json_ping", use_solr_num_found=True)
+        self.assertEqual(
+            self.runner.stats.get("/solr_json_ping", "GET").avg_content_length, 0
+        )
+
+    def test_request_stats_solr_num_found_for_not_json(self):
+        class MyUser(FastHttpUser):
+            host = "http://127.0.0.1:%i" % self.port
+
+        locust = MyUser(self.environment)
+        locust.client.get("/solr_json_not_json", use_solr_num_found=True)
+        self.assertEqual(
+            self.runner.stats.get("/solr_json_not_json", "GET").avg_content_length, 0
+        )
+
 
     def test_request_stats_no_content_length(self):
         class MyUser(FastHttpUser):
